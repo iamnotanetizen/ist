@@ -1,0 +1,48 @@
+name: school-digest
+
+on:
+  schedule:
+    # 8 PM America/Chicago = 01:00 UTC during CDT, 02:00 UTC during CST.
+    # Run at both; the script's internal time check skips the wrong one.
+    - cron: "0 1 * * *"
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Print digest without sending"
+        type: boolean
+        default: false
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Skip if not 8 PM in America/Chicago (scheduled runs only)
+        if: github.event_name == 'schedule'
+        run: |
+          HOUR=$(TZ=America/Chicago date +%H)
+          echo "Local hour in America/Chicago: $HOUR"
+          if [ "$HOUR" != "20" ]; then
+            echo "Not 8 PM local — exiting cleanly."
+            exit 0
+          fi
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Run digest
+        env:
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DIGEST_TO: ${{ secrets.DIGEST_TO }}
+          DIGEST_CC: ${{ secrets.DIGEST_CC }}
+          DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '' }}
+        run: python digest.py
