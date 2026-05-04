@@ -37,6 +37,19 @@ jobs:
 
       - run: pip install -r requirements.txt
 
+      - name: Verify secrets are present
+        run: |
+          missing=""
+          [ -z "${{ secrets.GMAIL_USER }}" ] && missing="$missing GMAIL_USER"
+          [ -z "${{ secrets.GMAIL_APP_PASSWORD }}" ] && missing="$missing GMAIL_APP_PASSWORD"
+          [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ] && missing="$missing ANTHROPIC_API_KEY"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repo secrets:$missing"
+            echo "Add them at https://github.com/${{ github.repository }}/settings/secrets/actions"
+            exit 1
+          fi
+          echo "All required secrets present."
+
       - name: Run digest
         env:
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
