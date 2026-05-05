@@ -69,16 +69,30 @@ jobs:
           set +e
           python digest.py 2>&1 | tee run.log
           status=${PIPESTATUS[0]}
-          # Trim to last 80 lines and redact any obvious creds before surfacing
+          # Trim to last 80 lines and redact creds before surfacing
           tail -80 run.log \
             | sed -E 's/(sk-ant-api03-[A-Za-z0-9_-]{6})[A-Za-z0-9_-]+/\1…REDACTED/g' \
-            | sed -E 's/([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+)/\1/g' \
             > tail.log
           {
-            echo "tail<<EOF"
+            echo "tail<<DIGEST_EOF"
             cat tail.log
-            echo "EOF"
+            echo "DIGEST_EOF"
           } >> "$GITHUB_OUTPUT"
+          # Always write a step summary (visible on the run page without expanding logs)
+          {
+            if [ "$status" -ne 0 ]; then
+              echo "## ❌ digest failed (exit $status)"
+            else
+              echo "## ✅ digest ran"
+            fi
+            echo ""
+            echo "<details><summary>Last 80 lines of digest.py output</summary>"
+            echo ""
+            echo '```'
+            cat tail.log
+            echo '```'
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
           exit $status
 
       - name: Post failure as PR comment (workflow_dispatch only)
