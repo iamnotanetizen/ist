@@ -67,7 +67,7 @@ def imap_search_school_messages(user: str, password: str) -> list[Msg]:
         msgs: list[Msg] = []
         for q in queries:
             full_q = f"newer_than:{LOOKBACK_DAYS}d ({q})"
-            typ, data = M.uid("SEARCH", None, "X-GM-RAW", full_q)
+            typ, data = M.uid("SEARCH", None, "X-GM-RAW", f'"{full_q}"')
             if typ != "OK" or not data or not data[0]:
                 continue
             for uid in data[0].split():
